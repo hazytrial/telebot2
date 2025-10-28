@@ -2,7 +2,7 @@ import os
 import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from flask import Flask
 from threading import Thread
 
@@ -84,16 +84,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if query.data == 'reset':
-        await query.edit_message_text(
+        context.user_data['awaiting_input'] = True
+        await query.message.reply_text(
             "✉️ Please enter your Instagram username or email:"
         )
-        context.user_data['awaiting_input'] = True
         
     elif query.data == 'reset_again':
         keyboard = [[InlineKeyboardButton("🔄 RESET", callback_data='reset')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
+        context.user_data['awaiting_input'] = False
         
-        await query.edit_message_text(
+        await query.message.reply_text(
             "📱 Instagram Reset Bot By Hazy • @yaplol\n\n"
             "Click RESET below to recover your account.",
             reply_markup=reply_markup
@@ -142,8 +143,6 @@ def main():
     application = Application.builder().token(TOKEN).build()
     
     # Add handlers
-    from telegram.ext import MessageHandler, filters
-    
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
