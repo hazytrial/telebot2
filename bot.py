@@ -2,7 +2,14 @@ import os
 import logging
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,  # <-- FIXED: Imported here
+    filters          # <-- FIXED: Imported here
+)
 from flask import Flask
 from threading import Thread
 
@@ -36,6 +43,8 @@ class InstagramReset:
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'en-US;q=0.8,en;q=0.7',
             'content-type': 'application/x-www-form-urlencoded',
+            # NOTE: The 'cookie' and 'x-csrftoken' values are likely expired and need
+            # to be updated from a fresh Instagram session for this request to work reliably.
             'cookie': 'csrftoken=BbJnjd.Jnw20VyXU0qSsHLV; mid=ZpZMygABAAH0176Z6fWvYiNly3y2; ig_did=BBBA0292-07BC-49C8-ACF4-AE242AE19E97; datr=ykyWZhA9CacxerPITDOHV5AE; ig_nrcb=1; dpr=2.75; wd=393x466',
             'origin': 'https://www.instagram.com',
             'referer': 'https://www.instagram.com/accounts/password/reset/?source=fxcal',
@@ -47,7 +56,7 @@ class InstagramReset:
             'sec-fetch-site': 'same-origin',
             'user-agent': 'Mozilla/5.0 (Linux; Android 10; M2101K786) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
             'x-asbd-id': '129477',
-            'x-csrftoken': 'BbJnjd.Jnw20VyXU0qSsHLV',
+            'x-csrftoken': 'BbJnjd.Jnw20VyXU0qSsHLV', # NOTE: Must match cookie csrftoken
             'x-ig-app-id': '1217981644879628',
             'x-ig-www-claim': '0',
             'x-instagram-ajax': '1015181662',
@@ -158,6 +167,7 @@ def main():
     # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_callback))
+    # MessageHandler and filters are now available due to the fix
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Start bot
@@ -166,5 +176,5 @@ def main():
     logger.info("Bot started successfully!")
 
 if __name__ == '__main__':
-    from telegram.ext import MessageHandler, filters
+    # Removed unnecessary import here
     main()
