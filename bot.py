@@ -21,7 +21,7 @@ def home():
     return "Bot is running!"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=8080, use_reloader=False)
 
 # Instagram Reset Class
 class InstagramReset:
@@ -102,6 +102,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle user input for reset"""
+    if not update.message or not update.message.text:
+        return
+        
     if context.user_data.get('awaiting_input'):
         context.user_data['awaiting_input'] = False
         email = update.message.text.strip()
@@ -115,29 +118,39 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Format response
         if "error" in result:
             response = f"❌ Error occurred: {result['error']}"
-            status = "failed"
         elif result.get('status') == 'ok':
             response = "✅ Password reset link sent successfully!"
-            status = "success"
         else:
-            response = f"⚠️ Response: {result}"
-            status = "unknown"
+            response = f"⚠️ Response: {str(result)}"
         
         # Create reset again button
         keyboard = [[InlineKeyboardButton("🔄 RESET AGAIN", callback_data='reset_again')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await processing_msg.edit_text(response, reply_markup=reply_markup)
+    else:
+        # If user sends message without clicking reset, show start message
+        keyboard = [[InlineKeyboardButton("🔄 RESET", callback_data='reset')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "📱 Instagram Reset Bot By Hazy • @yaplol\n\n"
+            "Click RESET below to recover your account.",
+            reply_markup=reply_markup
+        )
 
 def main():
     """Start the bot"""
+    # Get bot token from environment variable
+    TOKEN = "8256075803:AAE5XedVphcKSm1X_hCgpWAaHd26pARU5qc"
+    
+    logger.info(f"Starting bot with token: {TOKEN[:10]}...")
+    
     # Start Flask in background thread
     flask_thread = Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
-    
-    # Get bot token from environment variable
-    TOKEN = "8256075803:AAE5XedVphcKSm1X_hCgpWAaHd26pARU5qc"
+    logger.info("Flask server started on port 8080")
     
     # Create application
     application = Application.builder().token(TOKEN).build()
@@ -148,8 +161,9 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     # Start bot
+    logger.info("Starting Telegram bot polling...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
     logger.info("Bot started successfully!")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     from telegram.ext import MessageHandler, filters
